@@ -6,8 +6,7 @@
 #
 #    http://shiny.rstudio.com/
 #
-# first run: make a lookup table that shows corresponding secondaries
-# to primary species
+# need to adjust the segment identity to more/less specific regions
 library(shiny)
 library(dplyr)
 secondaries <- readxl::read_excel("C:/Users/sbwil/Documents/R/Shiny/ShinyProject1/testdb.xlsx", sheet = 2)
@@ -45,7 +44,7 @@ ui <- fluidPage(
 server <- function(input, output) {
   
   # Return the requested dataset ----
-  
+  # produce a table of antibodies that will mark selected segment
   ab1Input <- reactive({
     genes <- identity %>% filter(IDENTITY == "Cap Mesenchyme")#input$ident1)
     genes <- genes$GENE
@@ -61,7 +60,7 @@ server <- function(input, output) {
       }
     }
   })
-  
+  # database that displays that associated to the selected segment in input
   segInput <- reactive({
     seg <- identity %>% filter(IDENTITY == input$ident1)
   })
