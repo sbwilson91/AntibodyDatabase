@@ -6,6 +6,7 @@ palette(c("#E41A1C", "#377EB8", "#4DAF4A", "#984EA3",
 
 
 library(shiny)
+library(dplyr)
 
 ui <- fluidPage(
   headerPanel('Iris k-means clustering'),
