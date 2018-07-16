@@ -36,7 +36,7 @@ ui <- fluidPage(
       
       # Show a table of the antibodies compatable with input
       mainPanel(
-         tableOutput("ident1")
+         tableOutput("seg")
       )
    )
 )
@@ -61,10 +61,14 @@ server <- function(input, output) {
       }
     }
   })
+  
+  segInput <- reactive({
+    seg <- identity %>% filter(IDENTITY == input$ident1)
+  })
 
   # Generate a table of the primaries of selected species ----
-  output$ident1 <- renderTable({
-    ident1 <- ab1Input()
+  output$seg <- renderTable({
+    seg <- segInput()
     
   })
   
