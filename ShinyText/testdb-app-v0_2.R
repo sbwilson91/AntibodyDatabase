@@ -9,6 +9,7 @@
 # need to adjust the segment identity to more/less specific regions
 library(shiny)
 library(dplyr)
+
 secondaries <- readxl::read_excel("C:/Users/sbwil/Documents/R/Shiny/ShinyProject1/testdb.xlsx", sheet = 2)
 primaries <- readxl::read_excel("C:/Users/sbwil/Documents/R/Shiny/ShinyProject1/testdb.xlsx", sheet = 1)
 identity <- readxl::read_excel("C:/Users/sbwil/Documents/R/Shiny/ShinyProject1/testdb.xlsx", sheet = 3)
@@ -35,7 +36,8 @@ ui <- fluidPage(
       
       # Show a table of the antibodies compatable with input
       mainPanel(
-         tableOutput("seg")
+        textOutput("ident1"),
+        tableOutput("ab1")
       )
    )
 )
@@ -45,32 +47,26 @@ server <- function(input, output) {
   
   # Return the requested dataset ----
   # produce a table of antibodies that will mark selected segment
-  ab1Input <- reactive({
-    genes <- identity %>% filter(IDENTITY == "Cap Mesenchyme")#input$ident1)
-    genes <- genes$GENE
-    primaries <- na.omit(primaries)
-    prim <- as.data.frame("")
-    for (i in 1:nrow(primaries)){
-      for (j in 1:length(genes)){
-        if (as.character(primaries[i,3]) == genes[j]){
-          print(genes[j])
-          prim <- rbind(primaries[i,])
-          print(prim)
-        }
-      }
-    }
+  identityInput <- reactive({
+    identity$GENE <- toupper(identity$GENE)
+    identity %>% filter(IDENTITY == input$ident1) %>% arrange(GENE)
   })
-  # database that displays that associated to the selected segment in input
-  segInput <- reactive({
-    seg <- identity %>% filter(IDENTITY == input$ident1)
+  primariesInput <- reactive({
+    primaries$GENE <- toupper(primaries$GENE)
+    primaries
+  })
+  
+  # output the segment as a text header
+  output$ident1 <- renderText({
+    input$ident1
   })
 
   # Generate a table of the primaries of selected species ----
-  output$seg <- renderTable({
-    seg <- segInput()
+  output$ab1 <- renderTable({
+    inner_join(identityInput(), primariesInput(), by = "GENE")
     
   })
-  
+
   
 }  
 # Run the application 
