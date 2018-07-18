@@ -15,6 +15,7 @@ primaries <- readxl::read_excel("C:/Users/sbwil/Documents/R/Shiny/ShinyProject1/
 identity <- readxl::read_excel("C:/Users/sbwil/Documents/R/Shiny/ShinyProject1/testdb.xlsx", sheet = 3)
 # generate vector string of segment identities
 identities <- unique(identity$IDENTITY)
+
 # Define UI for application that draws a histogram
 ui <- fluidPage(
    
@@ -28,7 +29,10 @@ ui <- fluidPage(
         
          selectInput(inputId = "ident1",
                      label =  "Segment/Identity/Region #1",
-                     choices = identities)
+                     choices = identities),
+         selectInput(inputId = "ident2",
+                     label =  "Secondary Species",
+                     choices = secondaries$SPECIES_REACTIVITY)
          
 
       ),
@@ -37,7 +41,8 @@ ui <- fluidPage(
       # Show a table of the antibodies compatable with input
       mainPanel(
         textOutput("ident1"),
-        tableOutput("ab1")
+        tableOutput("ab1"),
+        tableOutput("sec1")
       )
    )
 )
@@ -47,9 +52,12 @@ server <- function(input, output) {
   
   # Return the requested dataset ----
   # produce a table of antibodies that will mark selected segment
-  identityInput <- reactive({
+  ab1Input <- reactive({
     identity$GENE <- toupper(identity$GENE)
     identity %>% filter(IDENTITY == input$ident1) %>% arrange(GENE)
+  })
+  sec1Input <- reactive({
+    secondaries %>% filter(SPECIES_REACTIVITY == input$ident2) %>% arrange(CONJUGATE)
   })
   primariesInput <- reactive({
     primaries$GENE <- toupper(primaries$GENE)
@@ -63,7 +71,11 @@ server <- function(input, output) {
 
   # Generate a table of the primaries of selected species ----
   output$ab1 <- renderTable({
-    inner_join(identityInput(), primariesInput(), by = "GENE")
+    inner_join(ab1Input(), primariesInput(), by = "GENE")
+    
+  })
+  output$sec1 <- renderTable({
+    sec1Input()
     
   })
 
