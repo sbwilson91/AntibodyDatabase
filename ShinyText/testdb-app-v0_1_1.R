@@ -10,8 +10,42 @@
 # to primary species
 library(shiny)
 library(dplyr)
-secondaries <- readxl::read_excel("C:/Users/sbwil/Documents/R/Shiny/ShinyProject1/testdb.xlsx", sheet = 2)
-primaries <- readxl::read_excel("C:/Users/sbwil/Documents/R/Shiny/ShinyProject1/testdb.xlsx", sheet = 1)
+primaries <- readxl::read_excel("E:/Antibody Database-MCRI.xlsx", sheet = 1) %>% filter(!is.na(MCRI_ID))
+
+secondaries <- readxl::read_excel("E:/Antibody Database-MCRI.xlsx", sheet = 2) %>%
+  transmute(MCRI_ID = MCRI_ID,
+            UQ_ID = UQ_ID,
+            SOURCE = SOURCE,
+            SPECIES_REACTIVITY = SPECIES_REACTIVITY,
+            CONJUGATE = CONJUGATE)
+
+imb <- readxl::read_excel("E:/IMB Complete Antibody Inventory 2014.xlsx", sheet = 1) %>% filter(!is.na(UQ_ID))
+
+
+
+combined <- right_join((primaries %>% transmute(MCRI_ID = MCRI_ID,
+                                                UQ_ID = UQ_ID,
+                                                Description = Description,
+                                                GENE = GENE,
+                                                Immunogen = Immunogen,
+                                                Supplier = Supplier,
+                                                CAT_NO = CAT_NO,
+                                                SOURCE = SOURCE
+)),
+(imb %>% transmute(UQ_ID = UQ_ID,
+                   Description = Description,
+                   GENE = GENE,
+                   Immunogen = Immunogen,
+                   Supplier = Supplier,
+                   CAT_NO = CAT_NO,
+                   SOURCE = SOURCE)), 
+by = c("UQ_ID", "GENE", "CAT_NO","SOURCE")) %>% filter(!is.na(GENE)) %>% 
+  transmute(MCRI_ID = MCRI_ID,
+            UQ_ID = UQ_ID,
+            GENE = GENE,
+            SOURCE = SOURCE)
+
+combined$GENE <- toupper(combined$GENE)
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
@@ -65,19 +99,19 @@ server <- function(input, output) {
   # Return the requested dataset ----
   
   primInput1 <- reactive({
-    primaries %>% filter(GENE == input$antibody1)
+    combined %>% filter(GENE == toupper(input$antibody1))
   })
   
   primInput2 <- reactive({
-    primaries %>% filter(GENE == input$antibody2)
+    combined %>% filter(GENE == input$antibody2)
   })
   
   primInput3 <- reactive({
-    primaries %>% filter(GENE == input$antibody3)
+    combined %>% filter(GENE == input$antibody3)
   })
   
   primInput4 <- reactive({
-    primaries %>% filter(GENE == input$antibody4)
+    combined %>% filter(GENE == input$antibody4)
   })
   
   secInput <- reactive({
