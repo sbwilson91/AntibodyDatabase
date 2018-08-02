@@ -6,11 +6,20 @@
 #
 #    http://shiny.rstudio.com/
 #
-# first run: make a lookup table that shows corresponding secondaries
-# to primary species
+#
+# load the libraries
 library(shiny)
 library(dplyr)
-primaries <- readxl::read_excel("E:/Antibody Database-MCRI.xlsx", sheet = 1) %>% filter(!is.na(MCRI_ID))
+
+# load and adjust the databases for the various antibodies
+primaries <- readxl::read_excel("E:/Antibody Database-MCRI.xlsx", sheet = 1) %>% filter(!is.na(MCRI_ID)) %>% 
+  transmute(MCRI_ID = MCRI_ID,
+            UQ_ID = UQ_ID,
+            #DESCRIPTION = Description,
+            GENE = GENE,
+            #SUPPLIER = Supplier,
+            CAT_NO = CAT_NO,
+            SOURCE = SOURCE)
 
 secondaries <- readxl::read_excel("E:/Antibody Database-MCRI.xlsx", sheet = 2) %>%
   transmute(MCRI_ID = MCRI_ID,
@@ -19,33 +28,29 @@ secondaries <- readxl::read_excel("E:/Antibody Database-MCRI.xlsx", sheet = 2) %
             SPECIES_REACTIVITY = SPECIES_REACTIVITY,
             CONJUGATE = CONJUGATE)
 
-imb <- readxl::read_excel("E:/IMB Complete Antibody Inventory 2014.xlsx", sheet = 1) %>% filter(!is.na(UQ_ID))
-
-
-
-combined <- right_join((primaries %>% transmute(MCRI_ID = MCRI_ID,
-                                                UQ_ID = UQ_ID,
-                                                Description = Description,
-                                                GENE = GENE,
-                                                Immunogen = Immunogen,
-                                                Supplier = Supplier,
-                                                CAT_NO = CAT_NO,
-                                                SOURCE = SOURCE
-)),
-(imb %>% transmute(UQ_ID = UQ_ID,
-                   Description = Description,
-                   GENE = GENE,
-                   Immunogen = Immunogen,
-                   Supplier = Supplier,
-                   CAT_NO = CAT_NO,
-                   SOURCE = SOURCE)), 
-by = c("UQ_ID", "GENE", "CAT_NO","SOURCE")) %>% filter(!is.na(GENE)) %>% 
-  transmute(MCRI_ID = MCRI_ID,
-            UQ_ID = UQ_ID,
+imb <- readxl::read_excel("E:/IMB Complete Antibody Inventory 2014.xlsx", sheet = 1) %>% filter(!is.na(UQ_ID)) %>% 
+  transmute(UQ_ID = UQ_ID,
+            #DESCRIPTION = Description,
             GENE = GENE,
+            #SUPPLIER = Supplier,
+            CAT_NO = CAT_NO,
             SOURCE = SOURCE)
 
+# merge the primary databases together (primaries and imb, noting imb contains secondaries as well)
+combined <- full_join(primaries, imb, 
+                        by = c("UQ_ID", "GENE", "SOURCE", "CAT_NO")) %>% filter(!is.na(GENE)) %>% 
+                          transmute(MCRI_ID = MCRI_ID,
+                                    UQ_ID = UQ_ID,
+                                    GENE = GENE,
+                                    SOURCE = SOURCE)
+
+primOnly <- primaries %>% filter(is.na(UQ_ID))
+imbOnly <- anti_join(imb, combined,
+                     by = c("UQ_ID"))
+setdiff(intersect(primaries$UQ_ID, imb$UQ_ID),combined$UQ_ID)
+
 combined$GENE <- toupper(combined$GENE)
+secondaries$SPECIES_REACTIVITY <- toupper(secondaries$SPECIES_REACTIVITY)
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
@@ -60,23 +65,23 @@ ui <- fluidPage(
         
         
          textInput(inputId = "antibody1",
-                   label =  "Which antibody?",
-                   placeholder = "eg. Six2"),
+                   label =  "Antibody #1?",
+                   placeholder = "eg. LTL"),
          
          textInput(inputId = "antibody2",
-                   label =  "Which antibody?",
-                   placeholder = "eg. Six2"),
+                   label =  "Antibody #2?",
+                   placeholder = "eg. gata3"),
          
          textInput(inputId = "antibody3",
-                   label =  "Which antibody?",
-                   placeholder = "eg. Six2"),
+                   label =  "Antibody 3?",
+                   placeholder = "eg. ecad"),
          
          textInput(inputId = "antibody4",
-                   label =  "Which antibody?",
-                   placeholder = "eg. Six2"),
+                   label =  "Antibody #4?",
+                   placeholder = "eg. nphs1"),
          
          selectInput(inputId = "species",
-                     label = "Which primary species?",
+                     label = "Raised against which species?",
                      choices = c("Rabbit", "Mouse", "Goat", "Sheep",
                                  "Chicken", "Biotin"))
       ),
@@ -84,11 +89,13 @@ ui <- fluidPage(
       
       # Show a table of the antibodies compatable with input
       mainPanel(
+        splitLayout(
+          verticalLayout(
          tableOutput("prim1"),
          tableOutput("prim2"),
          tableOutput("prim3"),
-         tableOutput("prim4"),
-         tableOutput("sec")
+         tableOutput("prim4")),
+         tableOutput("sec"))
       )
    )
 )
@@ -100,22 +107,23 @@ server <- function(input, output) {
   
   primInput1 <- reactive({
     combined %>% filter(GENE == toupper(input$antibody1))
+    
   })
   
   primInput2 <- reactive({
-    combined %>% filter(GENE == input$antibody2)
+    combined %>% filter(GENE == toupper(input$antibody2))
   })
   
   primInput3 <- reactive({
-    combined %>% filter(GENE == input$antibody3)
+    combined %>% filter(GENE == toupper(input$antibody3))
   })
   
   primInput4 <- reactive({
-    combined %>% filter(GENE == input$antibody4)
+    combined %>% filter(GENE == toupper(input$antibody4))
   })
   
   secInput <- reactive({
-    secondaries %>% filter(SPECIES_REACTIVITY == input$species) %>% 
+    secondaries %>% filter(SPECIES_REACTIVITY == toupper(input$species)) %>% 
       arrange(CONJUGATE)
   })
   
